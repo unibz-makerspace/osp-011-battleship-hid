@@ -134,6 +134,7 @@ class AttackGrid {
 		
 		// TODO: Write code to transmit sensed positions back to the computer.
 
+		/*
 		//Serial.print(column); Serial.print(":");
 		for (uint8_t i = 0; i < 1; i++) {
 			//Serial.print(" 0x");
@@ -141,6 +142,7 @@ class AttackGrid {
 			Serial.print(rLedPhotodiodesLit[i] - rLedPhotodiodesUnlit[i]);
 		}
 		Serial.println();
+		*/
 	}
 
 public:

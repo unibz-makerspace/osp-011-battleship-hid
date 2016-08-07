@@ -46,6 +46,11 @@
  * THE SOFTWARE.
  */
 
+// http://firmatabuilder.com
+#include <ConfigurableFirmata.h>
+#include <FirmataExt.h>
+#include <FirmataReporting.h>
+
 #include "AttackGrid.h"
 #include "RgbLedMatrix.h"
 #include "RgbLedPhotodiodeArray.h"
@@ -73,13 +78,19 @@ AttackGrid<
 	>
 > attackGrid;
 
+//AnalogInputFirmata analogInput;
+FirmataExt firmataExt;
+FirmataReporting reporting;
+
 void setup() {
-	Serial.begin(115200);
+	setupFirmata();
+	//Serial.begin(115200);
 	attackGrid.begin();
 	pinMode(PIN_SIG_LED, OUTPUT);
 }
 
 void loop() {
+	loopFirmata();
 	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
 	USING_STATES;
 	STATE(SIG_LED_ON) {
@@ -93,6 +104,26 @@ void loop() {
 	STATE(SIG_LED_RESET) {
 		GOTO(SIG_LED_ON);
 	}
+}
+
+void setupFirmata() {
+	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
+	firmataExt.addFeature(reporting);
+	Firmata.attach(SYSTEM_RESET, systemResetCallback);
+	Firmata.begin();
+	systemResetCallback();
+}
+
+void loopFirmata() {
+	while (Firmata.available()) {
+		Firmata.processInput();
+	}
+	// TODO: Add code to be processed by firmata.
+}
+
+void systemResetCallback() {
+	// TODO: Add code to be processed by firmata.
+	firmataExt.reset();
 }
 
 /*
