@@ -24,7 +24,7 @@
 
   See file LICENSE.txt for further informations on licensing terms.
 
-  Last updated by Jeff Hoefs: July 17th, 2016
+  Last updated by Jeff Hoefs: August 14th, 2016
 */
 
 /*
@@ -188,9 +188,10 @@
 
 
 // STEP 2 [OPTIONAL for all boards and shields]
-// If you want to setup you board as a TCP client, uncomment the following define and replace
-// the IP address with the IP address of your server.
-//#define SERVER_IP 10, 0, 0, 15
+// By default the board/shield is configured as a TCP server.
+// If you want to setup you board/shield as a TCP client, uncomment the following define and
+// replace the REMOTE_SERVER_IP address below with the IP address of your remote server.
+//#define REMOTE_SERVER_IP 10, 0, 0, 15
 
 
 // STEP 3 [REQUIRED for all boards and shields]
@@ -209,7 +210,7 @@ char ssid[] = "your_network_name";
 
 // STEP 5 [REQUIRED for all boards and shields]
 // define your port number here, you will need this to open a TCP connection to your Arduino
-#define SERVER_PORT 3030
+#define NETWORK_PORT 3030
 
 
 // STEP 6 [REQUIRED for all boards and shields]
@@ -289,10 +290,10 @@ char wep_key[] = "your_wep_key";
  * WIFI STREAM (don't change anything here)
  *============================================================================*/
 
-#ifdef SERVER_IP
-  WiFiClientStream stream(IPAddress(SERVER_IP), SERVER_PORT);
+#ifdef REMOTE_SERVER_IP
+  WiFiClientStream stream(IPAddress(REMOTE_SERVER_IP), NETWORK_PORT);
 #else
-  WiFiServerStream stream(SERVER_PORT);
+  WiFiServerStream stream(NETWORK_PORT);
 #endif
 
 /*==============================================================================

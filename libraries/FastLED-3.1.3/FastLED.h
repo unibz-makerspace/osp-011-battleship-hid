@@ -11,12 +11,12 @@
 #define FASTLED_HAS_PRAGMA_MESSAGE
 #endif
 
-#define  FASTLED_VERSION 3001001
+#define  FASTLED_VERSION 3001003
 #ifndef FASTLED_INTERNAL
 #  ifdef FASTLED_HAS_PRAGMA_MESSAGE
-#    pragma message "FastLED version 3.001.001"
+#    pragma message "FastLED version 3.001.003"
 #  else
-#    warning FastLED version 3.001.001  (Not really a warning, just telling you here.)
+#    warning FastLED version 3.001.003  (Not really a warning, just telling you here.)
 #  endif
 #endif
 
@@ -434,7 +434,7 @@ public:
 		#ifdef HAS_PORTDC
 				case WS2811_PORTDC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES,NS(320), NS(320), NS(640), RGB_ORDER>(), data, nLedsOrOffset, nLedsIfOffset);
 				case WS2811_400_PORTDC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES,NS(800), NS(800), NS(900), RGB_ORDER>(), data, nLedsOrOffset, nLedsIfOffset);
-        case WS2813_PORTC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES, NS(320), NS(320), NS(640), RGB_ORDER, 0, false, 300>(), data, nLedsOrOffset, nLedsIfOffset);
+        case WS2813_PORTDC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES, NS(320), NS(320), NS(640), RGB_ORDER, 0, false, 300>(), data, nLedsOrOffset, nLedsIfOffset);
 				case TM1803_PORTDC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES, NS(700), NS(1100), NS(700), RGB_ORDER>(), data, nLedsOrOffset, nLedsIfOffset);
 				case UCS1903_PORTDC: return addLeds(new SixteenWayInlineBlockClocklessController<NUM_LANES, NS(500), NS(1500), NS(500), RGB_ORDER>(), data, nLedsOrOffset, nLedsIfOffset);
 		#endif
