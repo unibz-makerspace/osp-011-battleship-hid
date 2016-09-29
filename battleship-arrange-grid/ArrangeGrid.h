@@ -132,11 +132,15 @@ public:
 		laserPhotoresistorArrayColumn.read(columnReading, MAX_COLUMNS);
 		for (uint8_t i = 0; i < MAX_ROWS; i++) {
 			photoresistorRow[i]
-				.getLogicOutputWithHysteresis(i, rowReading[i]);
+				.getLogicOutputWithHysteresis(
+					MAX_ROWS - i -1, rowReading[i] // With reverse index order.
+				);
 		}
 		for (uint8_t i = 0; i < MAX_COLUMNS; i++) {
 			photoresistorColumn[i]
-				.getLogicOutputWithHysteresis(i, columnReading[i]);
+				.getLogicOutputWithHysteresis(
+					i, columnReading[i]
+				);
 		}
 	}
 };
