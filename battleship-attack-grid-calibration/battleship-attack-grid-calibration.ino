@@ -88,6 +88,7 @@ void setup() {
 	//Serial.begin(115200);
 	attackGrid.begin();
 	pinMode(PIN_SIG_LED, OUTPUT);
+	setPattern();
 }
 
 void loop() {
@@ -128,6 +129,23 @@ void loopFirmata() {
 void systemResetCallback() {
 	// TODO: Add code to be processed by firmata.
 	firmataExt.reset();
+}
+
+void setPattern() {
+	GameGrid::Tile::Type type = GameGrid::Tile::Type::WATER;
+	static int i = 0;
+	static int row = 0;
+	static int column = 0;
+	for (int i=0; i < LED_MATRIX_ROWS * LED_MATRIX_COLUMNS; i++) {
+		attackGrid.setTile(row, column++, type[i]);
+		if (column == LED_MATRIX_COLUMNS) {
+			column = 0;
+			row++;
+			if (row == LED_MATRIX_ROWS) {
+				row = 0;
+			}
+		}
+	}
 }
 
 /*

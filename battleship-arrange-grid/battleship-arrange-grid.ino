@@ -65,7 +65,7 @@ enum {
 	SAMPLE_REFRESH_RATE  = 10,      // Laser beam sample rate in Hz.
 };
 
-// TODO: Change photoresistor min/max values if calibration is needed.
+// Change photoresistor min/max values if calibration is needed.
 template<
 	typename LaserPhotoresistorArrayRow,
 	typename LaserPhotoresistorArrayColumn,

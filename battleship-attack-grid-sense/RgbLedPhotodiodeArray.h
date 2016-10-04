@@ -46,95 +46,66 @@
  * THE SOFTWARE.
  */
 
-// http://firmatabuilder.com
-#include <ConfigurableFirmata.h>
-#include <FirmataExt.h>
-#include <FirmataReporting.h>
+#ifndef RGB_LED_PHOTODIODE_ARRAY_H
+#define RGB_LED_PHOTODIODE_ARRAY_H
 
-#include "AttackGrid.h"
-#include "RgbLedMatrix.h"
-#include "RgbLedPhotodiodeArray.h"
-#include "SpiDevicePortB.h"
-#include "States.h"
+#include <Arduino.h>
+#include <stdint.h>
 
-enum {
-	LED_MATRIX_ROWS         = 8,
-	LED_MATRIX_COLUMNS      = 8,
-	PIN_SS_LED_MATRIX       = PB2,     // Digital pin 10 (PORTB).
-	F_SCK_LED_MATRIX        = 8000000, // Frequency in Hz.
-	PIN_SS_PHOTODIODE_ARRAY = PB1,     // Digital pin 9 (PORTB).
-	F_SCK_PHOTODIODE_ARRAY  = 2000000, // Frequency in Hz.
-	PIN_SIG_LED             = 8,       // Digital pin 8.
-	SIG_LED                 = HIGH,
-	SIG_LED_DURATION        = 1000,    // Time between toggle in ms.
+/// <summary>
+/// RGB LED photodiode driver. The red LED will work as a light sensor whereas
+/// the green and blue LEDs can function as light emitters.
+/// </summary>
+template<typename SpiDevice>
+class RgbLedPhotodiodeArray {
+
+	static SpiDevice spiDevice;
+
+	enum MCP3008Configuration {
+		// Use all 8 channels @ 8-bits. Do not care for 10 bit resolution.
+		MCP3008_START_BIT            = (1 << 6),
+		MCP3008_SINGLE_NOT_DIFF_CONV = (1 << 5),
+		MCP3008_CHANNEL_MAX          = 8,
+		MCP3008_CHANNEL_LSHIFT       = 2,
+		MCP3008_DUMMY_BYTE           = 0x00
+	};
+
+public:
+	/// <summary>
+	/// Initalize sensor and perform software reset.
+	/// </summary>
+	static void begin() {
+		spiDevice.master();
+		uint8_t dummyByte[1] = { 0x00 };
+		read(dummyByte, sizeof(dummyByte));
+	}
+
+	/// <summary>
+	/// Reads the red LEDs as photodiodes.
+	/// </summary>
+	/// <param name="diodes">
+	/// Array of data bytes to be read. Its content will be overwritten by the
+	/// sensed values.
+	/// </param>
+	/// <param name="length">
+	/// The length of the array.
+	/// </param>
+	/// <returns>
+	/// The actual number of read photodiodes.
+	/// </returns>
+	static uint8_t read(uint8_t * /*[out]*/ diodes, uint8_t length) {
+		const uint8_t MAX_ITEMS = length % (MCP3008_CHANNEL_MAX + 1);
+		for (uint8_t i = 0; i < MAX_ITEMS; i++) {
+			const uint8_t MCP3008_CONFIG_BYTE =
+				MCP3008_START_BIT |
+				MCP3008_SINGLE_NOT_DIFF_CONV |
+				(i << MCP3008_CHANNEL_LSHIFT);
+			uint8_t buffer[] = { MCP3008_CONFIG_BYTE, MCP3008_DUMMY_BYTE };
+			spiDevice.transferBulk(buffer, sizeof(buffer));
+			diodes[i] = buffer[1];
+		}
+		return MAX_ITEMS;
+	}
 };
 
-AttackGrid <
-	RgbLedMatrix<
-	SpiDevicePortB<PIN_SS_LED_MATRIX, F_SCK_LED_MATRIX>
-	>,
-	RgbLedPhotodiodeArray<
-	SpiDevicePortB<PIN_SS_PHOTODIODE_ARRAY, F_SCK_PHOTODIODE_ARRAY>
-	>,
-	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
-> attackGrid;
-
-//AnalogInputFirmata analogInput;
-FirmataExt firmataExt;
-FirmataReporting reporting;
-
-void setup() {
-	setupFirmata();
-	//Serial.begin(115200);
-	attackGrid.begin();
-	pinMode(PIN_SIG_LED, OUTPUT);
-}
-
-void loop() {
-	loopFirmata();
-	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
-	USING_STATES;
-	STATE(SIG_LED_ON) {
-		digitalWrite(PIN_SIG_LED, SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_OFF) {
-		digitalWrite(PIN_SIG_LED, !SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_RESET) {
-		//Firmata.sendString("test");
-		GOTO(SIG_LED_ON);
-	}
-	attackGrid.run();
-}
-
-void setupFirmata() {
-	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
-	Firmata.disableBlinkVersion();
-	firmataExt.addFeature(attackGrid);
-	Firmata.attach(SYSTEM_RESET, systemResetCallback);
-	Firmata.begin();
-	systemResetCallback();
-}
-
-void loopFirmata() {
-	while (Firmata.available()) {
-		Firmata.processInput();
-	}
-	// TODO: Add code to be processed by firmata.
-}
-
-void systemResetCallback() {
-	// TODO: Add code to be processed by firmata.
-	firmataExt.reset();
-}
-
-/*
-// Proposed colors:
-const CRGB colors[] = {
-CRGB::Cyan,   // Water.
-CRGB::Yellow, // Hit.
-CRGB::Red     // Sunk (blinking).
-};
-*/
+#endif // RGB_LED_PHOTODIODE_ARRAY_H

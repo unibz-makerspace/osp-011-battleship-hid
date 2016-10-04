@@ -86,8 +86,33 @@ void setup() {
 }
 
 void loop() {
+  testShiftRegisters();
+  /*
   testLedLights();
   testExternalAdc();
+  */
+}
+
+void testShiftRegisters() {
+  static const SPISettings spiSettings(SPI_SCK_FREQ, SPI_BIT_ORDER, SPI_MODE);
+  SPI.beginTransaction(spiSettings);
+  digitalWrite(PIN_CS_LED, SIG_CS);
+  SPI.transfer(0xAA); // COM
+  SPI.transfer(~0xAA); // ~B
+  SPI.transfer(~0xAA); // ~G
+  SPI.transfer(~0xAA); // ~R
+  digitalWrite(PIN_CS_LED, !SIG_CS);
+  SPI.endTransaction();
+  delay(LED_DURATION);
+  SPI.beginTransaction(spiSettings);
+  digitalWrite(PIN_CS_LED, SIG_CS);
+  SPI.transfer(0x55); // COM
+  SPI.transfer(~0x55); // ~B
+  SPI.transfer(~0x55); // ~G
+  SPI.transfer(~0x55); // ~R
+  digitalWrite(PIN_CS_LED, !SIG_CS);
+  SPI.endTransaction();
+  delay(LED_DURATION);
 }
 
 void testLedLights() {

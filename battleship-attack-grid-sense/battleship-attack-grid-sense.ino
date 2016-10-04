@@ -46,28 +46,23 @@
  * THE SOFTWARE.
  */
 
-// http://firmatabuilder.com
-#include <ConfigurableFirmata.h>
-#include <FirmataExt.h>
-#include <FirmataReporting.h>
-
 #include "AttackGrid.h"
 #include "RgbLedMatrix.h"
 #include "RgbLedPhotodiodeArray.h"
 #include "SpiDevicePortB.h"
-#include "States.h"
 
 enum {
-	LED_MATRIX_ROWS         = 8,
-	LED_MATRIX_COLUMNS      = 8,
-	PIN_SS_LED_MATRIX       = PB2,     // Digital pin 10 (PORTB).
-	F_SCK_LED_MATRIX        = 8000000, // Frequency in Hz.
+	LED_MATRIX_ROWS = 8,
+	LED_MATRIX_COLUMNS = 8,
+	PIN_SS_LED_MATRIX = PB2,     // Digital pin 10 (PORTB).
+	F_SCK_LED_MATRIX = 8000000, // Frequency in Hz.
 	PIN_SS_PHOTODIODE_ARRAY = PB1,     // Digital pin 9 (PORTB).
-	F_SCK_PHOTODIODE_ARRAY  = 2000000, // Frequency in Hz.
-	PIN_SIG_LED             = 8,       // Digital pin 8.
-	SIG_LED                 = HIGH,
-	SIG_LED_DURATION        = 1000,    // Time between toggle in ms.
+	F_SCK_PHOTODIODE_ARRAY = 2000000, // Frequency in Hz.
+	PIN_SIG_LED = 8,       // Digital pin 8.
+	SIG_LED = HIGH,
+	SIG_LED_DURATION = 1000,    // Time between toggle in ms.
 };
+
 
 AttackGrid <
 	RgbLedMatrix<
@@ -79,62 +74,11 @@ AttackGrid <
 	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
 > attackGrid;
 
-//AnalogInputFirmata analogInput;
-FirmataExt firmataExt;
-FirmataReporting reporting;
-
 void setup() {
-	setupFirmata();
-	//Serial.begin(115200);
+	Serial.begin(115200);
 	attackGrid.begin();
-	pinMode(PIN_SIG_LED, OUTPUT);
 }
 
 void loop() {
-	loopFirmata();
-	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
-	USING_STATES;
-	STATE(SIG_LED_ON) {
-		digitalWrite(PIN_SIG_LED, SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_OFF) {
-		digitalWrite(PIN_SIG_LED, !SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_RESET) {
-		//Firmata.sendString("test");
-		GOTO(SIG_LED_ON);
-	}
 	attackGrid.run();
 }
-
-void setupFirmata() {
-	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
-	Firmata.disableBlinkVersion();
-	firmataExt.addFeature(attackGrid);
-	Firmata.attach(SYSTEM_RESET, systemResetCallback);
-	Firmata.begin();
-	systemResetCallback();
-}
-
-void loopFirmata() {
-	while (Firmata.available()) {
-		Firmata.processInput();
-	}
-	// TODO: Add code to be processed by firmata.
-}
-
-void systemResetCallback() {
-	// TODO: Add code to be processed by firmata.
-	firmataExt.reset();
-}
-
-/*
-// Proposed colors:
-const CRGB colors[] = {
-CRGB::Cyan,   // Water.
-CRGB::Yellow, // Hit.
-CRGB::Red     // Sunk (blinking).
-};
-*/

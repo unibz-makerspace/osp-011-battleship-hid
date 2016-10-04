@@ -46,95 +46,53 @@
  * THE SOFTWARE.
  */
 
-// http://firmatabuilder.com
-#include <ConfigurableFirmata.h>
-#include <FirmataExt.h>
-#include <FirmataReporting.h>
+#ifndef RGB_LED_MATRIX_H
+#define RGB_LED_MATRIX_H
 
-#include "AttackGrid.h"
-#include "RgbLedMatrix.h"
-#include "RgbLedPhotodiodeArray.h"
-#include "SpiDevicePortB.h"
-#include "States.h"
+#include <Arduino.h>
+#include <stdint.h>
 
-enum {
-	LED_MATRIX_ROWS         = 8,
-	LED_MATRIX_COLUMNS      = 8,
-	PIN_SS_LED_MATRIX       = PB2,     // Digital pin 10 (PORTB).
-	F_SCK_LED_MATRIX        = 8000000, // Frequency in Hz.
-	PIN_SS_PHOTODIODE_ARRAY = PB1,     // Digital pin 9 (PORTB).
-	F_SCK_PHOTODIODE_ARRAY  = 2000000, // Frequency in Hz.
-	PIN_SIG_LED             = 8,       // Digital pin 8.
-	SIG_LED                 = HIGH,
-	SIG_LED_DURATION        = 1000,    // Time between toggle in ms.
+/// <summary>
+/// RGB LED matrix driver for common catode LEDs. The matrix can be implemented
+/// with daisy chained shift registers such as 74HC595. The first 3 registers in
+/// the chain are responsible for red, green, and blue colors of each row. The
+/// 4th register is responsible for selecting the current active column.
+/// </summary>
+template<typename SpiDevice>
+class RgbLedMatrix {
+
+	static SpiDevice spiDevice;
+
+public:
+	/// <summary>
+	/// Initalize matrix.
+	/// </summary>
+	static void begin() {
+		spiDevice.master();
+	}
+
+	/// <summary>
+	/// Write the row colors to the selected column. The enabled color for each
+	/// row is encoded as a bitfield.
+	/// </summary>
+	static void writeColumn(
+			uint8_t rowReds, uint8_t rowGreens, uint8_t rowBlues,
+			uint8_t column) {
+		// Calculate register contents for a common cathode RGB LED matrix.
+		rowReds   = ~rowReds;   // Flip bits to activate PMOS transistors.
+		rowGreens = ~rowGreens; // Flip bits to activate PMOS transistors.
+		rowBlues  = ~rowBlues;  // Flip bits to activate PMOS transistors.
+		column = (uint8_t)(1 << column); // Activate given row NMOS transistor.
+		// The order of the bytes depends on the positioning of the daisy
+		// chained shift registers. In this case the first shift register is
+		// responsable for the red LEDs, the 2nd for the green LEDs, and the 3rd
+		// for the blue LEDs. Finally the is the last register for the selection
+		// of the active column. Since the column register is the last one in
+		// the chain it must be transmitted as the first byte following the
+		// other bytes until it propagates through all the shift registers.
+		uint8_t data[] = { column, rowBlues, rowGreens, rowReds };
+		spiDevice.transferBulk(data, sizeof(data));
+	}
 };
 
-AttackGrid <
-	RgbLedMatrix<
-	SpiDevicePortB<PIN_SS_LED_MATRIX, F_SCK_LED_MATRIX>
-	>,
-	RgbLedPhotodiodeArray<
-	SpiDevicePortB<PIN_SS_PHOTODIODE_ARRAY, F_SCK_PHOTODIODE_ARRAY>
-	>,
-	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
-> attackGrid;
-
-//AnalogInputFirmata analogInput;
-FirmataExt firmataExt;
-FirmataReporting reporting;
-
-void setup() {
-	setupFirmata();
-	//Serial.begin(115200);
-	attackGrid.begin();
-	pinMode(PIN_SIG_LED, OUTPUT);
-}
-
-void loop() {
-	loopFirmata();
-	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
-	USING_STATES;
-	STATE(SIG_LED_ON) {
-		digitalWrite(PIN_SIG_LED, SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_OFF) {
-		digitalWrite(PIN_SIG_LED, !SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_RESET) {
-		//Firmata.sendString("test");
-		GOTO(SIG_LED_ON);
-	}
-	attackGrid.run();
-}
-
-void setupFirmata() {
-	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
-	Firmata.disableBlinkVersion();
-	firmataExt.addFeature(attackGrid);
-	Firmata.attach(SYSTEM_RESET, systemResetCallback);
-	Firmata.begin();
-	systemResetCallback();
-}
-
-void loopFirmata() {
-	while (Firmata.available()) {
-		Firmata.processInput();
-	}
-	// TODO: Add code to be processed by firmata.
-}
-
-void systemResetCallback() {
-	// TODO: Add code to be processed by firmata.
-	firmataExt.reset();
-}
-
-/*
-// Proposed colors:
-const CRGB colors[] = {
-CRGB::Cyan,   // Water.
-CRGB::Yellow, // Hit.
-CRGB::Red     // Sunk (blinking).
-};
-*/
+#endif // RGB_LED_MATRIX_H
