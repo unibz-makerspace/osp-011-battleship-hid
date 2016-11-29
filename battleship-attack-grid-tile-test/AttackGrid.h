@@ -147,6 +147,13 @@ public:
 	static void setTile(uint8_t row, uint8_t column, Tile::Type type) {
 		tiles[row][column] = type;
 	}
+
+	void onTileTypeMessageReceived(byte row, byte column, Tile::Type type) {
+		char str[24];
+		sprintf(str, "row=%d, column=%d, %s", row, column,
+			(type == Tile::Type::WATER) ? "WATER" : (type == Tile::Type::HIT) ? "HIT" : (type == Tile::Type::DESTROYED) ? "DESTROYED" : "UNKNOWN");
+		Firmata.sendString(str);
+	}
 };
 
 template<
