@@ -46,75 +46,92 @@
  * THE SOFTWARE.
  */
 
-#ifndef GAME_GRID_H
-#define GAME_GRID_H
+#include "AttackGrid.h"
+#include "RgbLedMatrix.h"
+#include "RgbLedPhotodiodeArray.h"
+#include "SpiDevicePortB.h"
+#include "States.h"
 
-#include <Arduino.h>
-#include <ConfigurableFirmata.h>
-#include <FirmataFeature.h>
-#include <stdio.h>
-#include <stdint.h>
-
-struct GameGrid {
-
-	static const byte MAX_ROWS = 8;
-	static const byte MAX_COLUMNS = 8;
-
-	/// <summary>
-	/// Abstract GameGrid::Tile class.
-	/// GameGrid::Tile::onTileTypeMessageReceived must be implemented by the
-	/// HID device driver to receive messages from the remote computer.
-	/// GameGrid::Tile::sendTileChangeMessage can be used to report tile change
-	/// info back to the remote computer.
-	/// </summary>
-	struct Tile : public FirmataFeature {
-
-		static const byte INVALID_VALUE       = INT8_MAX;
-		static const byte TILE_TYPE_MESSAGE   = 0x0F;
-		static const byte TILE_CHANGE_MESSAGE = 0x0E;
-
-		enum class Type {
-			NONE = 0x00,
-			WATER = 0x01,
-			HIT = 0x02,
-			DESTROYED = 0x03,
-		};
-
-		boolean handlePinMode(byte pin, int mode) { }
-		void handleCapability(byte pin) { }
-		void reset() { }
-
-		boolean handleSysex(byte command, byte argc, byte *argv) {
-			if ((command == TILE_TYPE_MESSAGE) && (argc >= 3)) {
-				byte item = argv[0];
-				byte row = argv[1];
-				byte column = argv[2];
-				onTileTypeMessageReceived(
-					row, column, static_cast<Tile::Type>(item)
-				);
-				return true;
-			}
-			return false;
-		}
-
-		/// <summary>
-		/// Implemented this method to receive tile type messages from the
-		/// remote computer.
-		/// </summary>
-		virtual void onTileTypeMessageReceived(
-			byte row, byte column, Tile::Type type) = 0;
-
-		/// <summary>
-		/// Report tile change messages back to the remote computer.
-		/// </summary>
-		static void sendTileChangeMessage(byte row, byte column) {
-			Firmata.write(START_SYSEX);
-			Firmata.write(TILE_CHANGE_MESSAGE);
-			Firmata.write(row % MAX_ROWS);
-			Firmata.write(column % MAX_COLUMNS);
-			Firmata.write(END_SYSEX);
-		}
-	};
+enum {
+	LED_MATRIX_ROWS         = 8,
+	LED_MATRIX_COLUMNS      = 8,
+	PIN_SS_LED_MATRIX       = PB2,     // Digital pin 10 (PORTB).
+	F_SCK_LED_MATRIX        = 8000000, // Frequency in Hz.
+	PIN_SS_PHOTODIODE_ARRAY = PB1,     // Digital pin 9 (PORTB).
+	F_SCK_PHOTODIODE_ARRAY  = 2000000, // Frequency in Hz.
+	PIN_SIG_LED             = 8,       // Digital pin 8.
+	SIG_LED                 = HIGH,
+	SIG_LED_DURATION        = 1000,    // Time between toggle in ms.
 };
 
-#endif // GAME_GRID_H
+AttackGrid <
+	RgbLedMatrix<
+	SpiDevicePortB<PIN_SS_LED_MATRIX, F_SCK_LED_MATRIX>
+	>,
+	RgbLedPhotodiodeArray<
+	SpiDevicePortB<PIN_SS_PHOTODIODE_ARRAY, F_SCK_PHOTODIODE_ARRAY>
+	>,
+	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
+> attackGrid;
+
+void setup() {
+	Serial.begin(250000);
+	attackGrid.begin();
+	pinMode(PIN_SIG_LED, OUTPUT);
+	//attackGrid.setTile(0, 0, GameGrid::Tile::Type::HIT);
+}
+
+void runStatusLed() {
+	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
+	USING_STATES;
+	STATE(SIG_LED_ON) {
+		digitalWrite(PIN_SIG_LED, SIG_LED);
+		DELAY(SIG_LED_DURATION);
+	}
+	STATE(SIG_LED_OFF) {
+		digitalWrite(PIN_SIG_LED, !SIG_LED);
+		DELAY(SIG_LED_DURATION);
+	}
+	STATE(SIG_LED_RESET) {
+		GOTO(SIG_LED_ON);
+	}
+}
+
+void runTileTest() {
+	enum {
+		TILE_STATE_HIT, TILE_STATE_DESTROYED, TILE_STATE_WATER,
+		TILE_STATE_REPEAT, TILE_FREQ = 2
+	};
+	static uint8_t row = 0;
+	static uint8_t col = 0;
+	USING_STATES;
+	STATE(TILE_STATE_HIT) {
+		attackGrid.setTile(row, col, GameGrid::Tile::Type::HIT);
+		DELAY(SIG_LED_DURATION / TILE_FREQ);
+	}
+	STATE(TILE_STATE_DESTROYED) {
+		attackGrid.setTile(row, col, GameGrid::Tile::Type::DESTROYED);
+		DELAY(SIG_LED_DURATION / TILE_FREQ);
+	}
+	STATE(TILE_STATE_WATER) {
+		attackGrid.setTile(row, col, GameGrid::Tile::Type::WATER);
+		DELAY(SIG_LED_DURATION / TILE_FREQ);
+	}
+	STATE(TILE_STATE_REPEAT) {
+		col++;
+		if (col >= LED_MATRIX_COLUMNS) {
+			col = 0;
+			row++;
+			if (row >= LED_MATRIX_ROWS) {
+				row = 0;
+			}
+		}
+		GOTO(TILE_STATE_HIT);
+	}
+}
+
+void loop() {
+	runStatusLed();
+	runTileTest();
+	attackGrid.run();
+}

@@ -46,112 +46,74 @@
  * THE SOFTWARE.
  */
 
-// http://firmatabuilder.com
+#ifndef GAME_GRID_H
+#define GAME_GRID_H
+
+#include <Arduino.h>
 #include <ConfigurableFirmata.h>
-#include <FirmataExt.h>
+#include <FirmataFeature.h>
+#include <stdio.h>
+#include <stdint.h>
 
-#include "AttackGrid.h"
-#include "RgbLedMatrix.h"
-#include "RgbLedPhotodiodeArray.h"
-#include "SpiDevicePortB.h"
-#include "States.h"
+struct GameGrid {
 
-enum {
-	LED_MATRIX_ROWS         = 8,
-	LED_MATRIX_COLUMNS      = 8,
-	PIN_SS_LED_MATRIX       = PB2,     // Digital pin 10 (PORTB).
-	F_SCK_LED_MATRIX        = 8000000, // Frequency in Hz.
-	PIN_SS_PHOTODIODE_ARRAY = PB1,     // Digital pin 9 (PORTB).
-	F_SCK_PHOTODIODE_ARRAY  = 2000000, // Frequency in Hz.
-	PIN_SIG_LED             = 8,       // Digital pin 8.
-	SIG_LED                 = HIGH,
-	SIG_LED_DURATION        = 1000,    // Time between toggle in ms.
+	static const byte MAX_ROWS = 8;
+	static const byte MAX_COLUMNS = 8;
+
+	/// <summary>
+	/// Abstract GameGrid::Tile class.
+	/// GameGrid::Tile::onTileTypeMessageReceived must be implemented by the
+	/// HID device driver to receive messages from the remote computer.
+	/// GameGrid::Tile::sendTileChangeMessage can be used to report tile change
+	/// info back to the remote computer.
+	/// </summary>
+	struct Tile : public FirmataFeature {
+
+		static const byte INVALID_VALUE       = INT8_MAX;
+		static const byte TILE_TYPE_MESSAGE   = 0x0F;
+		static const byte TILE_CHANGE_MESSAGE = 0x0E;
+
+		enum class Type {
+			WATER = 0x00,
+			HIT = 0x01,
+			DESTROYED = 0x02,
+		};
+
+		boolean handlePinMode(byte pin, int mode) { }
+		void handleCapability(byte pin) { }
+		void reset() { }
+
+		boolean handleSysex(byte command, byte argc, byte *argv) {
+			if ((command == TILE_TYPE_MESSAGE) && (argc >= 3)) {
+				byte item = argv[0];
+				byte row = argv[1];
+				byte column = argv[2];
+				onTileTypeMessageReceived(
+					row, column, static_cast<Tile::Type>(item)
+				);
+				return true;
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// Implemented this method to receive tile type messages from the
+		/// remote computer.
+		/// </summary>
+		virtual void onTileTypeMessageReceived(
+			byte row, byte column, Tile::Type type) = 0;
+
+		/// <summary>
+		/// Report tile change messages back to the remote computer.
+		/// </summary>
+		static void sendTileChangeMessage(byte row, byte column) {
+			Firmata.write(START_SYSEX);
+			Firmata.write(TILE_CHANGE_MESSAGE);
+			Firmata.write(row % MAX_ROWS);
+			Firmata.write(column % MAX_COLUMNS);
+			Firmata.write(END_SYSEX);
+		}
+	};
 };
 
-AttackGrid <
-	RgbLedMatrix<
-	SpiDevicePortB<PIN_SS_LED_MATRIX, F_SCK_LED_MATRIX>
-	>,
-	RgbLedPhotodiodeArray<
-	SpiDevicePortB<PIN_SS_PHOTODIODE_ARRAY, F_SCK_PHOTODIODE_ARRAY>
-	>,
-	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
-> attackGrid;
-
-FirmataExt firmataExt;
-
-void setup() {
-	setupFirmata();
-	attackGrid.begin();
-	pinMode(PIN_SIG_LED, OUTPUT);
-}
-
-void loop() {
-	loopFirmata();
-	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
-	USING_STATES;
-	STATE(SIG_LED_ON) {
-		digitalWrite(PIN_SIG_LED, SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_OFF) {
-		digitalWrite(PIN_SIG_LED, !SIG_LED);
-		DELAY(SIG_LED_DURATION);
-	}
-	STATE(SIG_LED_RESET) {
-		//Firmata.sendString("test");
-		GOTO(SIG_LED_ON);
-	}
-	rgbTestPattern();
-	attackGrid.run();
-}
-
-void setupFirmata() {
-	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
-	Firmata.disableBlinkVersion();
-	firmataExt.addFeature(attackGrid);
-	Firmata.attach(SYSTEM_RESET, systemResetCallback);
-	Firmata.begin();
-	systemResetCallback();
-}
-
-void loopFirmata() {
-	while (Firmata.available()) {
-		Firmata.processInput();
-	}
-	// TODO: Add code to be processed by firmata.
-}
-
-void systemResetCallback() {
-	// TODO: Add code to be processed by firmata.
-	firmataExt.reset();
-}
-
-void rgbTestPattern() {
-	static GameGrid::Tile::Type type[] = {
-		GameGrid::Tile::Type::NONE,
-		GameGrid::Tile::Type::WATER,
-		GameGrid::Tile::Type::HIT,
-		GameGrid::Tile::Type::DESTROYED,
-	};
-	static int i = 0;
-	static int row = 0;
-	static int column = 0;
-	static unsigned long tStart = millis();
-	unsigned long tStop = millis();
-	if ((tStop - tStart) > 500) {
-		tStart = tStop;
-		attackGrid.setTile(row, column++, type[i]);
-		if (column == LED_MATRIX_COLUMNS) {
-			column = 0;
-			row++;
-			if (row == LED_MATRIX_ROWS) {
-				row = 0;
-				i++;
-				if (i == 4) {
-					i = 0;
-				}
-			}
-		}
-	}
-}
+#endif // GAME_GRID_H

@@ -91,9 +91,6 @@ class AttackGrid : public GameGrid::Tile {
 				colReds |= enabledColor;
 				colGreens |= enabledColor;
 				break;
-			case Tile::Type::WATER:
-				colBlues |= enabledColor;
-				break;
 			default:
 				colGreens |= enabledColor;
 				colBlues |= enabledColor;
@@ -104,7 +101,7 @@ class AttackGrid : public GameGrid::Tile {
 		// Wait for the red leds such that they charge up with photons.
 		delayMicroseconds(tDiffMicros / 10);
 		// Takes 85us per scan @ SCK 2MHz.
-		rgbLedSenseAlgortihm(column);
+		//rgbLedSenseAlgortihm(column);
 		// Update column.
 		column++;
 		if (column >= MAX_COLUMNS) {
@@ -115,26 +112,21 @@ class AttackGrid : public GameGrid::Tile {
 	static void rgbLedSenseAlgortihm(uint8_t column) {
 		uint8_t redLedPhotodiodesLit[MAX_ROWS] = { 0 };
 		rgbLedPhotodiodeArray.read(redLedPhotodiodesLit, MAX_ROWS);
-		// TODO: Write code to transmit sensed positions back to the computer.
-		/*
-		char str[50];
-		sprintf(str,
-			"col=%d, 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+		char str[100];
+		snprintf(str, 100, "col=%d "
+			"[0:0x%02X 1:0x%02X 2:0x%02X 3:0x%02X "
+			"4:0x%02X 5:0x%02X 6:0x%02X 7:0x%02X]",
 			column,
-			redLedPhotodiodesLit[0], redLedPhotodiodesLit[1],
-			redLedPhotodiodesLit[2], redLedPhotodiodesLit[3], 
-			redLedPhotodiodesLit[4], redLedPhotodiodesLit[5], 
-			redLedPhotodiodesLit[6], redLedPhotodiodesLit[7]);
-		Firmata.sendString(str);
-		*/
-	}
-
-	static void readLeds() {
-		uint8_t rLedPhotodiodesLit[MAX_ROWS] = { 0 };
-		rgbLedPhotodiodeArray.read(rLedPhotodiodesLit, MAX_ROWS);
-		char str[20];
-		sprintf(str, "row=0, val=%d", rLedPhotodiodesLit[0]);
-		Firmata.sendString(str);
+			redLedPhotodiodesLit[0],
+			redLedPhotodiodesLit[1],
+			redLedPhotodiodesLit[2],
+			redLedPhotodiodesLit[3],
+			redLedPhotodiodesLit[4],
+			redLedPhotodiodesLit[5],
+			redLedPhotodiodesLit[6],
+			redLedPhotodiodesLit[7]
+		);
+		Serial.println(str);
 	}
 
 public:
@@ -155,15 +147,6 @@ public:
 	static void setTile(uint8_t row, uint8_t column, Tile::Type type) {
 		tiles[row][column] = type;
 	}
-
-	void onTileTypeMessageReceived(byte row, byte column, Tile::Type type) {
-		char str[24];
-		sprintf(str, "row=%d, column=%d, %s", row, column,
-			(type == Tile::Type::WATER) ? "WATER" :
-			(type == Tile::Type::HIT) ? "HIT" :
-			(type == Tile::Type::DESTROYED) ? "DESTROYED" : "NONE");
-		Firmata.sendString(str);
-	}
 };
 
 template<
@@ -177,6 +160,6 @@ GameGrid::Tile::Type AttackGrid<
 	RgbLedPhotodiodeArray,
 	MAX_ROWS, MAX_COLUMNS,
 	FPS
->::tiles[MAX_ROWS][MAX_COLUMNS] = { GameGrid::Tile::Type::NONE };
+>::tiles[MAX_ROWS][MAX_COLUMNS];
 
 #endif // ATTACK_GRID_H
