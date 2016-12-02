@@ -81,14 +81,15 @@ struct GameGrid {
 			SELECTED = 0x04 // Extra state not sent to pc. 
 		};
 
-		static bool shouldReset;// = false;
-
 		boolean handlePinMode(byte pin, int mode) { }
 		void handleCapability(byte pin) { }
+
+		static bool shouldReset;// = false;
+		//virtual void reset() = 0; // Does not work here as pure virtual! Why?
 		void reset() {
 			shouldReset = true;
 		};
-		//virtual void reset() = 0;
+
 
 		boolean handleSysex(byte command, byte argc, byte *argv) {
 			if ((command == TILE_TYPE_MESSAGE) && (argc >= 3)) {

@@ -79,20 +79,20 @@ AttackGrid <
 	LED_MATRIX_ROWS, LED_MATRIX_COLUMNS
 > attackGrid;
 
-//AnalogInputFirmata analogInput;
-FirmataExt firmataExt;
-FirmataReporting reporting;
+//FirmataExt firmataExt;
+//FirmataReporting reporting;
 
 void setup() {
-	setupFirmata();
-	//Serial.begin(115200);
+	//setupFirmata();
+	Serial.begin(250000);
 	attackGrid.begin();
 	pinMode(PIN_SIG_LED, OUTPUT);
-	setPattern();
+	//setPattern();
+	//attackGrid.setTile(7, 1, GameGrid::Tile::Type::HIT);
 }
 
 void loop() {
-	loopFirmata();
+	//loopFirmata();
 	enum { SIG_LED_ON, SIG_LED_OFF, SIG_LED_RESET };
 	USING_STATES;
 	STATE(SIG_LED_ON) {
@@ -110,7 +110,7 @@ void loop() {
 	attackGrid.run();
 }
 
-void setupFirmata() {
+/*void setupFirmata() {
 	Firmata.setFirmwareVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION);
 	Firmata.disableBlinkVersion();
 	firmataExt.addFeature(attackGrid);
@@ -129,9 +129,9 @@ void loopFirmata() {
 void systemResetCallback() {
 	// TODO: Add code to be processed by firmata.
 	firmataExt.reset();
-}
+}*/
 
-void setPattern() {
+/*void setPattern() {
 	GameGrid::Tile::Type type = GameGrid::Tile::Type::WATER;
 	static int i = 0;
 	static int row = 0;
@@ -146,7 +146,7 @@ void setPattern() {
 			}
 		}
 	}
-}
+}*/
 
 /*
 // Proposed colors:

@@ -149,9 +149,10 @@ class AttackGrid : public GameGrid::Tile {
 		// Write the result to the shift registers of the LED matrix.
 		rgbLedMatrix.writeColumn(colReds, colGreens, colBlues, column);
 		// Wait for the red leds such that they charge up with photons.
-		delayMicroseconds(tDiffMicros / 10);
+		delay(1);
+		//delayMicroseconds(tDiffMicros / 10);
 		// Takes 85us per scan @ SCK 2MHz.
-		rgbLedSenseAlgortihm(column);
+		rgbLedSenseAlgortihmDebug(column);
 		// Update column.
 		column++;
 		if (column >= MAX_COLUMNS) {
@@ -159,65 +160,44 @@ class AttackGrid : public GameGrid::Tile {
 		}
 	}
 
+	static void rgbLedSenseAlgortihmDebug(uint8_t column) {
+		static char buffer[65 * 8 + 1];
+		static long tStart = millis();
+		static bool printEnabled = false;
+		if (((millis() - tStart) > 1000) && (column == 0)) {
+			strcpy(buffer, "");
+			printEnabled = true;
+		}
+		uint8_t redLedPhotodiodesLit[MAX_ROWS] = { 0 };
+		rgbLedPhotodiodeArray.read(redLedPhotodiodesLit, MAX_ROWS);
+		if (printEnabled) {
+			char str[65];
+			snprintf(str, 65, "col=%d "
+				"[0:0x%02X 1:0x%02X 2:0x%02X 3:0x%02X "
+				"4:0x%02X 5:0x%02X 6:0x%02X 7:0x%02X]\n",
+				column,
+				redLedPhotodiodesLit[0],
+				redLedPhotodiodesLit[1],
+				redLedPhotodiodesLit[2],
+				redLedPhotodiodesLit[3],
+				redLedPhotodiodesLit[4],
+				redLedPhotodiodesLit[5],
+				redLedPhotodiodesLit[6],
+				redLedPhotodiodesLit[7]
+			);
+			strncat(buffer, str, 65);
+		}
+		if (printEnabled && (column == 7)) {
+			Serial.print(buffer);
+			printEnabled = false;
+			tStart = millis();
+		}
+	}
+
 	static void rgbLedSenseAlgortihm(uint8_t column) {
 		uint8_t redLedPhotodiodesLit[MAX_ROWS] = { 0 };
 		rgbLedPhotodiodeArray.read(redLedPhotodiodesLit, MAX_ROWS);
 		// TODO: Write code to transmit sensed positions back to the computer.
-		/*
-		char str[50];
-		sprintf(str,
-			"col=%d, 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
-			column,
-			redLedPhotodiodesLit[0], redLedPhotodiodesLit[1],
-			redLedPhotodiodesLit[2], redLedPhotodiodesLit[3], 
-			redLedPhotodiodesLit[4], redLedPhotodiodesLit[5], 
-			redLedPhotodiodesLit[6], redLedPhotodiodesLit[7]);
-		Firmata.sendString(str);
-		*/
-
-		/*
-		uint8_t rLedPhotodiodesLit[MAX_ROWS] = { 0 };
-		uint8_t rLedPhotodiodesUnlit[MAX_ROWS] = { 0 };
-		// Enable only blue LEDs and wait for 1us to settle before sensing.
-		uint8_t rowReds = 0x00, rowGreens = 0xFF, rowBlues = 0xFF;
-		rgbLedMatrix.writeColumn(rowReds, rowGreens, rowBlues, column);
-		//delayNanoseconds();
-		rgbLedPhotodiodeArray.read(rLedPhotodiodesLit, MAX_ROWS);
-		// Disable blue LEDs and wait for 1us to settle before sensing.
-		rowGreens = 0xFF; rowBlues = 0x00;
-		rgbLedMatrix.writeColumn(rowReds, rowGreens, rowBlues, column);
-		//delayNanoseconds();
-		rgbLedPhotodiodeArray.read(rLedPhotodiodesUnlit, MAX_ROWS);
-		
-		// TODO: Write code to transmit sensed positions back to the computer.
-		*/
-
-		/*
-		//Serial.print(column); Serial.print(":");
-		for (uint8_t i = 0; i < 1; i++) {
-			//Serial.print(" 0x");
-			//Serial.print(rLedPhotodiodesLit[i], HEX);
-			Serial.print(rLedPhotodiodesLit[i] - rLedPhotodiodesUnlit[i]);
-		}
-		Serial.println();
-		*/
-	}
-
-	static void readLeds() {
-		/*
-		rgbLedMatrix.writeColumn(
-			0x00, //rowReds,
-			0xFF, //rowGreens,
-			0xFF, //rowBlues,
-			0     //column
-		);
-		*/
-		uint8_t rLedPhotodiodesLit[MAX_ROWS] = { 0 };
-		rgbLedPhotodiodeArray.read(rLedPhotodiodesLit, MAX_ROWS);
-		char str[20];
-		sprintf(str, "row=0, val=%d", rLedPhotodiodesLit[0]);
-		Firmata.sendString(str);
-		//Timer1.initialize(1000000);
 	}
 
 public:
@@ -231,12 +211,14 @@ public:
 
 		// TODO: Timer1 interrupt conflicts with serial port interrupt. Maybe
 		// because we are using SPI transactions from within the interrupt.
+		/*
 		rgbLedMatrix.writeColumn(
 			0x00, //rowReds,
 			0xFF, //rowGreens,
 			0xFF, //rowBlues,
 			0     //column
 		);
+		*/
 		/*
 		Timer1.initialize(1000000);
 		Timer1.attachInterrupt(readLeds);
@@ -275,6 +257,6 @@ GameGrid::Tile::Type AttackGrid<
 	RgbLedPhotodiodeArray,
 	MAX_ROWS, MAX_COLUMNS,
 	FPS
->::tiles[MAX_ROWS][MAX_COLUMNS] = { GameGrid::Tile::Type::DESTROYED };
+>::tiles[MAX_ROWS][MAX_COLUMNS];// = { GameGrid::Tile::Type::HIT };
 
 #endif // ATTACK_GRID_H

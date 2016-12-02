@@ -80,6 +80,12 @@ public:
 		read(dummyByte, sizeof(dummyByte));
 	}
 
+	static void mcp3008Config(uint8_t channel, uint8_t data[2]) {
+		const uint8_t confByte = 0x60 | (channel << 2);
+		data[0] = confByte;
+		data[1] = 0x00;
+	}
+
 	/// <summary>
 	/// Reads the red LEDs as photodiodes.
 	/// </summary>
@@ -94,17 +100,13 @@ public:
 	/// The actual number of read photodiodes.
 	/// </returns>
 	static uint8_t read(uint8_t * /*[out]*/ diodes, uint8_t length) {
-		const uint8_t MAX_ITEMS = length % (MCP3008_CHANNEL_MAX + 1);
-		for (uint8_t i = 0; i < MAX_ITEMS; i++) {
-			const uint8_t MCP3008_CONFIG_BYTE =
-				MCP3008_START_BIT |
-				MCP3008_SINGLE_NOT_DIFF_CONV |
-				(i << MCP3008_CHANNEL_LSHIFT);
-			uint8_t buffer[] = { MCP3008_CONFIG_BYTE, MCP3008_DUMMY_BYTE };
-			spiDevice.transferBulk(buffer, sizeof(buffer));
-			diodes[i] = buffer[1];
+		for (uint8_t i = 0; i < MCP3008_CHANNEL_MAX; i++) {
+			static uint8_t data[2];
+			mcp3008Config(i, data);
+			spiDevice.transferBulk(data, sizeof(data));
+			diodes[i] = data[1];
 		}
-		return MAX_ITEMS;
+		MCP3008_CHANNEL_MAX;
 	}
 };
 
